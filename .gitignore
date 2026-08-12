@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Kaggle artifacts
+replay.json
+*.tar.gz
+kaggriculture-data/
+logs/
+replays/
+
+# Editor / OS
+.DS_Store
+*.swp
+.idea/
+.vscode/

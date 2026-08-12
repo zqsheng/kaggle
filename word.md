@@ -1,8 +1,7 @@
 # words
-- wheat 小麦
-- Carrot 胡萝卜
 
 ## 高难度单词
+
 - inventory 库存；存货
 - yield 收益；产量
 - fertilize 施肥
