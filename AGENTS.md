@@ -28,6 +28,7 @@ Kaggriculture is a two-player farming sim. Each player manages a farm and compet
 Your agent is a function that receives an observation and returns an action dict.
 
 **Observation fields:**
+
 - `player` — your player index (0 or 1)
 - `step` — current turn (0-indexed; supplied by the kaggle-environments framework)
 - `day` — current in-game day (0-indexed)
@@ -59,6 +60,7 @@ Your agent is a function that receives an observation and returns an action dict
 ```
 
 Farmer / hand ops:
+
 - Movement: `"NORTH"`, `"SOUTH"`, `"EAST"`, `"WEST"`, `"PASS"`. Locked tiles are passable — units can cross unbought quadrants but cannot act there
 - Shed / inventory: `"PICKUP" <item> [n]` (from shed), `"PLACE" <item> [n]` (places an animal on a matching structure when standing on it, or drops items into the shed when adjacent to it), `"DROP"` (when shed-adjacent, dumps entire inventory into shed; overflow past `shedCapacity` discarded). "Shed-adjacent" means standing on one of the four center tiles: `(4,4)`, `(5,4)`, `(4,5)`, `(5,5)`. The shed itself is not in `tiles`.
 - Plants: `"PLANT" <crop>`, `"WATER"`, `"HARVEST"`, `"FERTILIZE"`
@@ -153,6 +155,7 @@ chmod 600 ~/.kaggle/access_token
 ```
 
 Alternative auth methods:
+
 - **OAuth (browser flow):** `kaggle auth login`
 - **Environment variable:** `export KAGGLE_API_TOKEN=xxxxxxxxxxxxxx`
 

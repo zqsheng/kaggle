@@ -1,180 +1,177 @@
 # Kaggriculture
 
-A farming sim where two players compete to maximize their income from farming by selling to a dynamic market.
+一个农业模拟游戏，两个玩家通过将农产品卖给动态市场来竞争收入最大化。
 
-## Overview
+## 概览
 
-Each player starts with an empty farm and a small amount of income (seed money, if you will). Each turn, they can perform actions such as moving around the board, purchasing seeds or livestock, planting seeds, watering plants, harvesting produce or animal products, and selling that produce at the market. The game runs for a fixed amount of time representing one season, and the winner is determined by who has the most money in the bank at the end.
+每个玩家从一个空农场和少量启动资金开始。每回合，他们可以执行移动、购买种子或牲畜、播种、浇水、收获作物或动物产品，并将产出卖到市场。游戏持续固定时间表示一个季节，赛季结束时银行中现金最多者获胜。
 
-## Object Types
+## 物品类型
 
-| Type | Yield Type | Seed Cost | Base Market Price | Time to First Yield | Time to Max Yield | Subsequent Yields | Max Yield | Action Cost | Yield / tile / day |
+| 类型 | 产量类型 | 种子成本 | 基础市场价格 | 第一次产量时间 | 达到最大产量时间 | 后续产量 | 最大产量 | 操作成本 | 产量 / 格 / 天 |
 | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- | :---- |
-| **Wheat** | One-time | 10 | 25 | 2 days | 4 days | none | 6 (4 unfertilized) | 1 | 0.80 |
-| **Carrot** | One-time | 20 | 35 | 2 days | 3 days | none | 4 (3 unfertilized) | 1 | 0.75 |
-| **Tomato** | Ongoing | 50 | 60 | 8 days | 11 days | every day ×4 | 4 | 1 | 0.33 |
-| **Strawberry** | Ongoing | 100 | 120 | 10 days | 16 days | every other day ×4 | 4 | 1 | 0.24 |
-| **Melon** | One-time | 80 | 250 | 10 days | 10 days | none | 6 | 1 | 0.55 |
-| **Goose/Egg** | Ongoing | 300 | 50 | 4 days | NA | every day, indefinitely | 4 held | 1 \+ 1 (build coop) | 1.00 |
-| **Cow/Milk** | Ongoing | 400 | 160 | 8 days | NA | every two days, indefinitely | 6 held | 1 \+ 1 (build pasture) | 0.50 |
-| **Sheep/Wool** | Ongoing | 500 | 200 | 6 days | NA | every three days, indefinitely | 6 held | 1 \+ 1 (build pasture) | 0.33 |
-| **Fertilizer** | NA | 100 | X |  | X | X |  | 1 |  |
+| **Wheat** | 一次性 | 10 | 25 | 2 天 | 4 天 | 无 | 6（未施肥为 4） | 1 | 0.80 |
+| **Carrot** | 一次性 | 20 | 35 | 2 天 | 3 天 | 无 | 4（未施肥为 3） | 1 | 0.75 |
+| **Tomato** | 持续性 | 50 | 60 | 8 天 | 11 天 | 每天 ×4 | 4 | 1 | 0.33 |
+| **Strawberry** | 持续性 | 100 | 120 | 10 天 | 16 天 | 隔天 ×4 | 4 | 1 | 0.24 |
+| **Melon** | 一次性 | 80 | 250 | 10 天 | 10 天 | 无 | 6 | 1 | 0.55 |
+| **Goose/Egg** | 持续性 | 300 | 50 | 4 天 | 无 | 每天，无限期 | 4 可持有 | 1 + 1（建造鸡舍） | 1.00 |
+| **Cow/Milk** | 持续性 | 400 | 160 | 8 天 | 无 | 每两天，无限期 | 6 可持有 | 1 + 1（建造牧场） | 0.50 |
+| **Sheep/Wool** | 持续性 | 500 | 200 | 6 天 | 无 | 每三天，无限期 | 6 可持有 | 1 + 1（建造牧场） | 0.33 |
+| **Fertilizer** | 无 | 100 | X |  | X | X |  | 1 |  |
 
-For crops, "Yield / tile / day" is total units harvested divided by the days the tile is occupied, watering daily and harvesting at peak yield. For animals it is the steady-state production rate (`1 / interval`) once the first yield lands; animals keep producing for as long as they are fed, so there is no fixed occupancy to divide by. "Max Yield" for animals is `max_held`, the cap on *unharvested* product sitting on the tile, not a lifetime total.
+对于作物，“产量 / 格 / 天”是将该格占用期间的总可收获单位除以天数，假设每天浇水并在峰值收获。对于动物，这是第一次产量触发后保持的稳定生产率（`1 / 间隔`）；动物只要被喂养就会持续生产，因此不存在固定占用天数可供划分。“最大产量”对于动物而言是`max_held`，即格上未收获产品的上限，而不是生命周期总量。
 
-Crop "Time to Max Yield" is the age at which yield stops increasing under daily watering, which is not always the end of the bonus window:
+作物的“达到最大产量时间”是指在每天浇水的情况下产量停止增长的年龄，这并不总是奖金窗口的结束日期：
 
-- **Melon**'s bonus window is ages 6–12, but base 1 plus one unit per watered day reaches the cap of 6 at age 10, so ages 11–12 add nothing. Fertilizing reaches the cap at age 8.
-- **Wheat** and **Carrot** only reach their listed Max Yield of 6 and 4 with fertilizer; watering alone peaks at 4 and 3.
-- **Tomato** and **Strawberry** are ongoing but *not* indefinite: production is capped at 4 scheduled yields (tomato at ages 8–11, strawberry at ages 10, 12, 14, 16), after which the plant decays into a weed.
+- **Melon** 的奖金窗口是年龄 6–12，但基础 1 加上每浇水日 1 单位，在年龄 10 时就已经达到上限 6，因此年龄 11–12 不再增加产量。施肥时则在年龄 8 时达到上限。
+- **Wheat** 和 **Carrot** 只有施肥时才能达到表中列出的最大产量 6 和 4；单纯浇水最多分别达到 4 和 3。
+- **Tomato** 和 **Strawberry** 是持续性作物，但并非永续：它们的产量在达到 4 次计划产出后会衰减（番茄在年龄 8–11、草莓在年龄 10、12、14、16），之后植株会变成杂草。
 
-All plants must be watered every day. They will turn into weeds if they are not watered for two successive days. All animals must be fed every day using wheat. They will escape and be unrecoverable if they are not fed for two successive days. Wheat is also available to buy at the market and can be purchased at the current market price.
+所有植物必须每天浇水。若两天连续未浇水，则在日终时变成杂草。所有动物必须每天用小麦喂养。若两天连续未喂养，它们会逃掉且无法恢复。小麦也可以在市场上按当前价格购买。
 
-## Actions
+## 操作
 
-Each turn, the player may take one action. There are 24 turns per day, and 30 days in the season \- 720 total turns.
+每回合玩家可以执行一项操作。每日日共 24 回合，赛季共 30 天 —— 共 720 回合。
 
-### Farmer / Farm Hand Action
+### 农夫 / 农场工人操作
 
-Each Farmer / Farm Hand can be given an action every turn. Farmer/Farm Hand CAN occupy the same space.
+每个农夫 / 农场工人每回合可执行一次操作。农夫和工人可以占据同一格。
 
-#### Movement
+#### 移动
 
-- NORTH, SOUTH, EAST, WEST — Move one cell in that direction. Moves off the edge of the board are no-ops. Locked tiles are passable: a unit may move onto and across unbought quadrants, but tile actions (`PLANT`, `WATER`, `BUILD_*`, etc.) all no-op on a locked tile and consume nothing.
+- NORTH、SOUTH、EAST、WEST — 向该方向移动一格。移出地图边界的移动无效。锁定的格子可通行：单位可以走入和穿过未购入的象限，但在锁定格子上执行的格子操作（如 `PLANT`、`WATER`、`BUILD_*` 等）都会变成无效且不消耗任何资源。
 
-#### Shed
+#### 物资库
 
-Picks up an item from the shed (must be orthogonally adjacent) into the inventory
+从物资库拾取物品（必须与物资库正交相邻）到当前单位的背包。
 
-- PICKUP `<item>` `[n]` — move up to `n` of `<item>` (default 1) from the shed into the active farmer/hand's inventory. Any item present in the shed is valid (animals, fertilizer, harvested produce, etc.). Seeds live in a separate slot and are never picked up — `PLANT` consumes them directly.
-- DROP — orthogonally adjacent to the shed, dump the active farmer/hand's entire current inventory into the shed. Overflow past `shedCapacity` is discarded. No-op if not shed-adjacent.
+- PICKUP `<item>` `[n]` — 从物资库中将最多 `n` 个 `<item>`（默认 1）搬到当前农夫/工人的库存。物资库中任何现有物品都可以拾取（包括动物、肥料、收获物品等）。种子在独立槽位中，不会被 `PICKUP` 拾取；`PLANT` 会直接消耗种子。
+- DROP — 当单位与物资库正交相邻时，将当前单位的全部背包物品倒入物资库。超过 `shedCapacity` 的部分被丢弃。如果不在物资库相邻格，则无效。
 
-#### Plants
+#### 作物
 
-- PLANT — Plant a seed purchased from the market  
-  - Seeds are automatically available to all Farmers / Farm Hands   
-  - If you try to plant too many in a specific turn, none are planted  
-    - ie if you have 1 melon seed, but two units do the PLANT MELON command  
-- WATER — Water a plant. This only needs to be done once per day, and subsequent waterings on the same day are a no-op.  
-- HARVEST — Gather produce from a plant. If the plant does not have subsequent yields, it will be removed from the map. Each harvest action will yield at least one unit of the crop, with the potential of additional yield depending on watering and fertilizer (the formula differs by crop type — see harvest yields below). Harvested items are added to the inventory. 
-- FERTILIZE — Fertilize a plant to increase its potential yield (see harvest yields below).  
-  - Doubles the per-day yield bonus for the next 3 days. The bonus only applies on days the plant is also watered (basic needs first).
+- PLANT — 种植一个从市场购买的种子。  
+  - 种子对所有农夫 / 工人自动共享可用。  
+  - 如果本回合尝试种植超过实际持有数量，则不会种植任何一个。  
+    - 例如，如果只有 1 个哈密瓜种子，但两个单位都执行了 `PLANT MELON` 命令，则都不会种植。
+- WATER — 浇水。此操作每天只需执行一次，同一天内重复浇水无效。
+- HARVEST — 收获植物。如果该植物没有后续产量，则收获后会从地图上移除。每次收获至少会产出 1 单位作物，具体产量还会根据浇水和施肥情况增加（不同作物的计算公式不同 —— 见下文“收获产量”）。收获的物品会加入当前单位的库存。
+- FERTILIZE — 施肥以提高潜在产量（见下文“收获产量”）。  
+  - 对接下来 3 天的每日产量加成翻倍。该加成仅在当日植物也被浇水时生效（先满足基础需求）。
 
-#### Animals
+#### 动物
 
-- PLACE `<item>` `[n]` — Drop items from the active farmer/hand inventory into either a tile or the shed:  
-  - **Animal placement**: standing on a matching unoccupied structure (`GOOSE` on a coop, `SHEEP`/`COW` on a pasture) places one animal from inventory onto the tile. The `n` argument is ignored.  
-  - **Shed drop**: standing orthogonally adjacent to the shed moves up to `n` (default 1) of `<item>` from inventory into the shed. Capped by `shedCapacity`; excess stays in inventory.
-- FEED — Feed an animal using wheat (only needs to be done once per day)  
-- HARVEST — Collect the eggs/milk/wool produced by the animal.   
-- COLLECT\_FERTILIZER — Collect 1 fertilizer from the animal. Every surviving animal makes 1 available at the end of each day, whether or not it was fed or cared for. Uncollected fertilizer does not accumulate, so an animal left alone for five days still yields 1 unit.
-- CARE — Care for an animal (once per day, no-op if already cared for). See animal care below.
+- PLACE `<item>` `[n]` — 将当前单位库存中的物品放入格子或物资库：  
+  - **放置动物**：站在匹配且无人占用的建筑上时（`GOOSE` 放在鸡舍，`SHEEP`/`COW` 放在牧场），会将库存中的一个对应动物放置到该格。参数 `n` 会被忽略。  
+  - **放入物资库**：当单位与物资库正交相邻时，将最多 `n` 个（默认 1）`<item>` 从库存移入物资库。受 `shedCapacity` 限制；超出的部分继续留在库存中。
+- FEED — 喂养动物（只需每天一次）。
+- HARVEST — 收集动物产出的蛋/牛奶/羊毛。
+- COLLECT_FERTILIZER — 从动物处收集 1 份肥料。每只存活的动物每天结束时都会产生 1 份肥料，无论当天是否被喂养或照料。未收集的肥料不会累积，因此即使动物被放任 5 天，仍然只会产出 1 份肥料。
+- CARE — 照料动物（每天一次，若已照料则无效）。详见“动物照料”。
 
-#### Animal Care
+#### 动物照料
 
-CARE banks a yield bonus that is paid out on the animal's next scheduled production:
+CARE 会将一个产量加成存入待发放池，下一次计划产出时支付：
 
-* At end of day, if the animal was both fed AND cared for that day, `pending_care_bonus` increments by 1. Days where the animal was unfed do not bank a bonus (basic needs first).
-* On a scheduled production day, if the animal is fed, the entire banked bonus is added to that production's yield (in addition to the base 1) and the bank resets to 0.
-* If the animal is unfed on the production day, the base 1 unit is still produced, but the banked bonus is not applied and the bank resets to 0.
-* `pending_care_bonus` is capped indirectly by the per-animal `max_held` cap on `yield_units`.
+* 如果动物当天既被喂养又被照料，在日终时 `pending_care_bonus` 增加 1。当天若动物未被喂养，则不计入加成（先满足基础需求）。
+* 在计划产出当天，只要动物被喂养，全部存入加成会加入该次产量（在基础 1 之外），然后清零。
+* 如果产出当天动物未被喂养，则仍会产出基础 1 单位，但不会使用存储加成，加成池清零。
+* `pending_care_bonus` 的上限由每只动物的 `yield_units` 的 `max_held` 间接限制。
 
-#### Terrain
+#### 地形
 
-- BUILD\_COOP \- adds a coop to an unoccupied tile  
-- BUILD\_PASTURE \- add pasture to an unoccupied tile  
-- DIG — Remove a plant from a square to free up space OR remove a weed from a square (does not yield any produce) OR remove an **empty** goose coop / pasture. A coop or pasture with an animal on it cannot be dug; the DIG is a no-op.
+- BUILD_COOP — 在一个空格上建造鸡舍。  
+- BUILD_PASTURE — 在一个空格上建造牧场。  
+- DIG — 清除该格上的作物以腾出空间，或者清除杂草（不会产出任何农产品），或者清除一个**空的**鸡舍或牧场。若鸡舍/牧场上有动物则无法挖掘，该操作无效。
 
-#### Other
+#### 其他
 
-- PASS — Default if there is nothing to do (optional)
+- PASS — 当没有更好操作时的默认行为（可选）。
 
-### Market Action
+### 市场操作
 
-Each turn you can submit up to `maxMarketOrdersPerTurn` (default 10) market actions; any orders past that limit are silently dropped. This is an ordered list and market orders will be processed in order simultaneously (one from each player) while both players have orders.
+每回合你可以提交最多 `maxMarketOrdersPerTurn`（默认 10）个市场操作；超过该限制的订单会被静默丢弃。这是一个有序列表，市场订单会按顺序处理，同时并行考虑双方玩家的订单（如果两名玩家都有订单的话）。
 
-- BUY\_SEED — Purchase N units of a single item from the market.  
-  - BUY\_SEED WHEAT 1  
-- BUY\_ANIMAL \-   
-  - BUY\_ANIMAL GOOSE 1  
-- BUY\_PRODUCT  
-  - BUY\_PRODUCT WHEAT 1  
-  - BUY\_PRODUCT FERTILIZER 1  
-- SELL — Sell N units of a single item to the market.  
-  - SELL WHEAT 1  
-- HIRE — Hire a farm hand for the day. Cost increases for each extra hand hired on the same day.  
-- BUY\_LAND \- unlock a new 5x5 segment of land to plant on. Increasing in cost.   
-  - Costs are: $1k, $2k, $4k
+- BUY_SEED — 购买 N 单位的种子。  
+  - 例如：`BUY_SEED WHEAT 1`
+- BUY_ANIMAL — 购买动物。  
+  - 例如：`BUY_ANIMAL GOOSE 1`
+- BUY_PRODUCT — 购买市场中可回购的产品。  
+  - 例如：`BUY_PRODUCT WHEAT 1`、`BUY_PRODUCT FERTILIZER 1`
+- SELL — 向市场出售 N 单位某种物品。  
+  - 例如：`SELL WHEAT 1`
+- HIRE — 雇佣一名农场工人当日工作。成本随着当天雇佣次数增加而上涨。
+- BUY_LAND — 购买新的象限。
+  - 费用依次为：$1k、$2k、$4k
 
-## Watering / Animal Feed
+## 浇水 / 喂养
 
-Plants (and animals) must be watered/fed a minimum of every other day. Watering only needs to be done once per day, and subsequent watering actions are a no-op. In the case of plants not watered for two consecutive days, at the end of the day they turn into a WEED. In the case of animals they escape (unrecoverable).
+植物和动物至少每隔一天必须被浇水/喂养。浇水每天只需一次，同一天内重复浇水无效。如果植物两天连续未浇水，则在日终时变成 `WEED`。如果动物两天连续未喂养，则会逃跑且无法恢复。
 
-A new seed starts with `consecutive_unwatered = 1` — the planting day itself counts as the first missed day. A seed planted and left unwatered that same day reaches 2 at the end-of-day refresh and becomes a weed that night, before it grows. There is no grace period for fresh plantings.
+新种下的种子从 `consecutive_unwatered = 1` 开始——种植当天本身就算作第一天未浇水。如果当天种植后放任不浇水，该项在日终刷新时变为 2 并在当天夜里变成杂草，甚至在其长成之前。新种植的动物从 `consecutive_unfed = 0` 开始，因此第一天不喂养也不会立即逃跑。
 
-A newly placed animal starts with `consecutive_unfed = 0`, so it survives its first day unfed.
+请注意，一次性产量作物在其产量窗口期间浇水会提高产量。持续性作物/动物则不是这种效果。详见下文。
 
-Note that watering one-time yield plants during their yield window results in a higher yield. This is NOT true for ongoing yield plants/animals. See below.
+## 收获产量
 
-## Harvest Yields
+植物的产量可能会根据照料情况提高。
 
-Plants will potentially have higher yields based on how well they have been cared for. 
+* **一次性作物**（Wheat、Carrot、Melon）：从其 `max_yield_day` 的一半向上取整开始，在奖金窗口内每浇水一天可为总可收获产量增加 1 单位。  
+  * 施肥时每浇水一天改为增加 2 单位。
+* **持续性作物**（Tomato、Strawberry）：在固定时间间隔发生计划产出。基础产量为每次计划产出 1 单位。如果该天植物同时施肥且浇水，则产量加倍为 2 单位。
+* 一旦植物达到最大寿命，其总可用产量每隔一个回合减少 1 单位，直到降为 0，此时该植物变成杂草。  
+  * **一次性作物**在 `max_yield_day` 之后一天达到最大寿命。  
+  * **持续性作物**在累计产量达到 `max_yield` 后一天开始衰减（即触发足够次数的计划产出以达到上限，不管这些产出是否已经被收获）。
 
-* **One-time crops** (wheat, carrot, melon): Starting at half the plant's `max_yield_day` (Time to Max Yield) rounded up, watering during the bonus window will add one unit per day to the total harvestable yield.  
-  * Fertilized plants add 2 per day instead.  
-* **Ongoing crops** (tomato, strawberry): Scheduled production happens at fixed intervals. The base yield is 1 per scheduled production. If the plant is fertilized AND watered that day, yield is doubled to 2.  
-* Once a plant has hit its maximum lifespan, the total yield available on the plant will reduce by 1 every other turn until it hits 0, at which point the plant becomes a weed.
-  * **One-time crops** reach max lifespan one day after `max_yield_day`.
-  * **Ongoing crops** start decay one day after their cumulative production count reaches `max_yield` (i.e. they've fired enough scheduled productions to hit the cap, regardless of whether the produce has been harvested).
+## 地图特性
 
-## Map Features
+每个玩家都有自己的农场格子。玩家无法看到对方的物资库状态，但可以看到对方农场的公共状态。
 
-Each player has their own farm with a set number of squares. Players are unable to see the state of the other’s shed, but can see the state of their opponent’s farm.
+### 农场空间
 
-### Farm Space
+- 你的土地是一个 `boardSize` × `boardSize` 的网格（默认 10×10），分为四个 5×5 的象限。起始时你的农场只覆盖一个象限（25% 的格子）。你可以以日益递增的费用购买邻近象限，最终覆盖 100% 的格子。  
+- 每个作物或动物占用一个格子。  
+- 玩家可以自行决定作物与牲畜的布局，没有针对类型的强制上限。  
+- 空闲格子有概率生成杂草，必须先清除才能用于其他用途。  
+- 农场格子可以是作物、鸡舍/牧场、杂草或空闲状态。
 
-- The land near your farm is a `boardSize` × `boardSize` grid (default 10×10), divided into four 5×5 quadrants. At first, your farm covers one quadrant (25% of the squares). For an increasingly large fee, you can buy the neighboring quadrants and eventually cover 100% of the squares.  
-- Each plant or animal occupies one square on the farm.  
-- Players can allocate these squares however they choose between crops and livestock. There are no specific limits per type.  
-- Weeds have a chance of spawning on any empty cells on the farm, and must be cleared before the land can be used for other purposes.  
-- Squares on the farm can be either a plant, a coop/pasture, a weed, or empty.
+### 物资库（库存）
 
-### Shed (Inventory)
+- 作为尚未出售的收获物或尚未种植种子的库存。  
+- 农夫和雇佣的工人会在每天开始时从物资库复活。  
+- 农夫和工人的背包物品会在每天结束时存入物资库（若有空间）。  
+- 物资库容量有限，为 100 件物品，不包括种子。物资库满后进一步加入的物品（通过 `PLACE` 或日终背包转入）会被丢弃——没有额外的溢出空间，因此将物品堆积在农夫/工人背包中并不能绕过上限。
 
-- Functions as an inventory for items that are harvested but not yet sold, or for seeds that have not yet been planted  
-- Farmer and hired farm hands will spawn at the shed at the start of each day  
-- Farmer and hired farm hands drop their inventory at the end of the day in the shed (if there is room)  
-- Limited to 100 items, excluding seeds. Once the shed is full, any further items added (via `PLACE` mid-day or end-of-day inventory drop) are discarded — there is no overflow holding area, so stockpiling on farmer/hand inventories does not bypass the cap.
+物资库位于地图中央，不属于任何格子，因此不会出现在 `tiles` 数组中。`tiles` 的值只可能是 `None`、`"LOCKED"` 和结构字典。所谓“与物资库正交相邻”，是指站在四个中心格之一，即对于 `half = boardSize // 2`，位置是 `(half-1, half-1)`、`(half, half-1)`、`(half-1, half)`、`(half, half)`。在默认 `boardSize = 10` 时，这些位置分别是 `(4,4)`、`(5,4)`、`(4,5)` 和 `(5,5)`，每个象限一个。
 
-The shed sits at the center of the board and is not a tile — it never appears in the `tiles` array, whose only values are `None`, `"LOCKED"`, and structure dicts. "Orthogonally adjacent to the shed" means standing on one of the four center tiles, `(half-1, half-1)`, `(half, half-1)`, `(half-1, half)`, `(half, half)` for `half = boardSize // 2`. At the default `boardSize = 10` those are `(4,4)`, `(5,4)`, `(4,5)`, and `(5,5)`, one in each quadrant.
+### 农夫 / 农场工人
 
-### Farmer/Farm Hand
+#### 雇佣
 
-#### Hiring
+- 雇佣是一个市场订单（`HIRE`）。当天每多雇佣一名工人，成本就会更高。到日终时，所有工人的背包物品会掉落到物资库中，并且工人会消失（第二天需要重新雇佣）。  
+- 成本为 `farmHandCostMult * fib(n)`，其中 `n` 是当天已雇佣的次数（斐波那契序列从 1, 1, 2, 3, 5, 8, 13... 开始）。  
+  * 在默认 `farmHandCostMult = 1` 时，费用为 1、1、2、3、5、8、13、21 等（每日重置）。
+- 雇佣工人会按 NWSE 顺序出现在与物资库正交相邻的空格中。如果没有空格，则会选择占用最少的格子，平局时按 NWSE 优先。  
+- 生成位置不考虑格子是否锁定。由于主农夫初始位于 `(4,4)`，每天首次雇佣的工人通常会生成在 `(5,4)`，该格在购买 NE 象限之前是锁定的。锁定格子可以通行，因此生成在锁定格子上的工人可以返回已解锁的土地。
 
-- Hiring is a market order (`HIRE`). It costs more every time you want to hire an additional hand each day. At the end of the day all, hands drop inventory at the farm and disappear (need to be re-hired each day)  
-- Cost is `farmHandCostMult * fib(n)` where `n` is the number of hires already made today (fib starts 1, 1, 2, 3, 5, 8, 13, ...).  
-  - With the default `farmHandCostMult = 1`: 1, 1, 2, 3, 5, 8, 13, 21, etc… (resets at the start of each day)  
-- A hired hand appears orthogonally adjacent to the shed in a free space following NWSE. If there are not open spaces, it looks for the one with the least occupants, breaking ties by NWSE preference
-- Spawn placement ignores whether the tile is locked. Since the main farmer starts on `(4,4)`, the least-occupied rule sends the first hire of each day to `(5,4)`, which is locked until the NE quadrant is bought. Locked tiles are passable, so a hand spawned on one can move back to unlocked land.
+#### 库存
 
-#### Inventory
+- 收获或拾取物品时会加入当前单位的库存。  
+- 可以将物品放入物资库。  
+- 每天结束时，所有单位的库存都会转入物资库（若有空间）。不够放的物品会被丢弃——溢出即丢失。
 
-- When harvesting or picking items up, they are added to inventory.  
-- Can drop items in the shed  
-- At the end of the day, all items in all inventory will be added to shed inventory (if there is room). Anything that doesn't fit is discarded — overflow is lost.
+### 城镇建筑
 
-### Town Buildings
+随着赛季推进，每隔固定天数会解锁新商店（`townShopUnlockInterval` 天，默认 3 天）。每次解锁会从尚未解锁的商店中随机选择一个；一经解锁，该商店会持续存在到游戏结束。解锁的商店越多，总需求就会持续增长。
 
-As the season progresses, new shops unlock at regular intervals (every `townShopUnlockInterval` days, default 3). Each unlock is randomly selected from the shops that have not yet been added; once unlocked, a shop stays active for the rest of the game. Total demand grows monotonically as more shops unlock.
+每个已解锁商店每隔 `townShopSellInterval` 回合（默认 4 回合）消耗它所需求的每种产品各 1 份。因此在默认间隔下，一个需求小麦的商店每天会从市场移除 6 份小麦。单一产品商店消耗量为 2 倍。
 
-Each unlocked shop consumes one of every product it demands every `townShopSellInterval` turns (default 4). So with the default interval, a shop demanding wheat removes 6 wheat from the market per day. Single-product shops consume 2x.
+此外，镇中心每隔 `townCenterSellInterval` 回合（默认 12 回合）消耗一份每种产品（不包括肥料）。第 10 天之后该消耗提高到每种产品 2 份，第 20 天之后提高到每种产品 4 份。
 
-In addition, the town center consumes one of every product (excluding fertilizer) every `townCenterSellInterval` turns (default 12). After day 10 this is increased to 2 of each, and after day 20 it is increased to 4 of each.
-
-| Shop Type | Increases Demand For |
+| 商店类型 | 提高需求 |
 | :---- | :---- |
-| Bakery | eggs, wheat  |
+| Bakery | eggs, wheat |
 | Pizza Shop | milk, tomatoes, wheat |
 | Brunch Spot | eggs, wheat, strawberries |
 | Yarn Store | wool (2x) |
@@ -183,43 +180,43 @@ In addition, the town center consumes one of every product (excluding fertilizer
 | Smoothie Shop | strawberries, milk |
 | Farmers Market | wheat, carrots, tomatoes, strawberries |
 
-## Market Mechanics
+## 市场机制
 
-The market has an unlimited supply of seeds and animals at fixed prices. Sell prices, however, move dynamically per resource and persist across days.
+市场对种子和动物提供无限供应，价格固定。出售价格则根据每种资源动态移动，并会跨天持续。
 
-Every product (and fertilizer) starts the game with a market inventory of `I0 = 10,000` units, far above any single game's realistic production volume so that inventory is essentially guaranteed to stay positive. The sell price for a product is `base` at `I0`, rises as inventory falls (players buying or town consumption draining supply), and falls as inventory grows (players selling).
+每种产品（以及肥料）在游戏开始时的市场库存为 `I0 = 10,000` 单位，远高于任何单局现实性的产量，以便库存基本保持正数。产品的出售价格在库存等于 `I0` 时等于基础价 `base`，当库存下降时（玩家购买或城镇消耗降低供应）价格上升，当库存上升时（玩家出售）价格下降。
 
-### Selling inventory to the market
+### 向市场出售库存
 
-Players can queue any number of sell or buy orders (for any quantity) in the market action list. Orders are processed concurrently across players, one unit at a time. For example, when both players issue `SELL CARROT 10` first, we take the current carrot price, give both players that price for their first carrot, then add 2 carrots to the market (1 from each player) — which may shift the price — and repeat until both orders complete.
+玩家可以在市场操作列表中排队任意数量的卖单或买单（任意数量）。订单按回合并行处理，每次一单位。例如，当两名玩家都首先执行 `SELL CARROT 10` 时，会先取当前胡萝卜价格，给双方各第一根胡萝卜该价格，然后将两根胡萝卜加入市场（各一根），这可能改变价格，再继续处理下一个单位，直到两个订单完成。
 
-If the sell price has been driven down to `$1` (the price floor), the unit is still purchased but is *not* added to market inventory, so the floor remains responsive to subsequent buys.
+如果出售价格已经降到 `$1`（价格下限），该单位仍会被购买，但不会被加入市场库存，因此价格下限仍然会对之后的买盘做出响应。
 
-### Buying inventory from the market
+### 从市场购买库存
 
-Only `WHEAT` and `FERTILIZER` can be bought from the market via `BUY_PRODUCT` (other products are sold at the market but not bought back). Selling is unrestricted: every product, including fertilizer collected from animals, can be sold via `SELL`. Two things drain market inventory: town buildings (town center and shops, which consume products for free) and player `BUY_PRODUCT` orders. Buy orders follow the same one-unit-at-a-time concurrent procedure as sell orders. If a player runs out of money mid-order, the order is stopped.
+只有 `WHEAT` 和 `FERTILIZER` 可以通过 `BUY_PRODUCT` 从市场购买（其他产品可以卖给市场但不能买回）。出售是无限制的：每种产品，包括动物收集到的肥料，都可以通过 `SELL` 卖出。市场库存的消耗来源是城镇建筑（镇中心和商店免费消耗产品）和玩家的 `BUY_PRODUCT` 订单。买单同样按单位并行处理。如果玩家在订单过程中资金耗尽，该订单会停止。
 
-The buy price is quoted at the post-buy inventory and the sell price is quoted at the pre-sell inventory, so an immediate buy followed by a sell of the same item against an otherwise-unchanged market nets exactly zero.
+买价在下单时按单元后库存报价。
 
-### The Price Function
+### 价格函数
 
-For each resource the curve is defined by a base price, an anchor throughput `T`, and an independent **shape function** + **target move** for each side of the equilibrium:
+对于每个资源，价格曲线由基础价格、锚定吞吐量 `T`，以及平衡点两侧各自独立的**形状函数**和**目标幅度**定义：
 
 ```
 price(inv) = base + sign · amp · f(|inv − I0|)
-  sign = +1  if inv < I0   (scarcity → price up)
-  sign = −1  if inv > I0   (glut    → price down)
-  amp  = target · base / f(T)        (derived; not stored)
-  f    ∈ { linear, sq, sqrt, log, log10 }   (log uses ln(1+x), so f(0)=0)
+  sign = +1  if inv < I0   (稀缺 → 价格上涨)
+  sign = −1  if inv > I0   (过剩 → 价格下跌)
+  amp  = target · base / f(T)        (派生值；不存储)
+  f    ∈ { linear, sq, sqrt, log, log10 }   (log 使用 ln(1+x)，因此 f(0)=0)
 ```
 
-Floored at `$1` and rounded to the nearest dollar.
+结果取整到最接近的美元并向下取整至 `$1`。
 
-`T` is the production capacity of a single 5×5 field over a 24-day window at optimal watering with no fertilizer (animal totals are pre-discounted by 30% to account for wheat-feed overhead, and allow one day to build the coop or pasture). The 24-day window is a calibration horizon, not the 30-day season length. It is shorter on purpose: the opening days are setup-heavy and yield little.
+`T` 是在 24 天窗口内，一块 5×5 田地在最优浇水、不开肥的条件下的产能。这个 24 天窗口是校准范围，而不是 30 天赛季长度。它故意更短：开局阶段建造铺垫较多，产量较少。
 
-`target` says "moving `T` units past `I0` shifts the price by `target × base`." Picking different `f` and `target` on each side lets resources with similar production profiles play very differently strategically — wheat panics on scarcity but absorbs gluts, carrot is the opposite; melon barely reacts to scarcity but crashes hard on overproduction; wool mirrors melon at a smaller scale. Premium resources (base > $100: strawberry, melon, milk, wool) use `above_target > 1`, so even modest gluts drive them straight to the $1 floor — bundling and timing sales matters more for these than for staples.
+`target` 表示“超过 `I0` 多少单位会让价格变化 `target × base`”。在平衡点两侧选择不同的 `f` 和 `target` 让产量相似的资源在策略上表现大不相同——小麦在稀缺时会迅速涨价，但能吸收过剩；胡萝卜相反；哈密瓜对稀缺反应弱，但过剩时会暴跌；羊毛与哈密瓜在更小尺度上表现类似。高端资源（基础价 > $100：草莓、哈密瓜、牛奶、羊毛）在价格过剩侧使用 `above_target > 1`，因此即使适度过剩也会直接跌到 $1 下限——把这些资源捆绑出售和控制时机更重要。
 
-| Resource | Base | I0 | T | Below func | Below target | Above func | Above target | P(I0−T) | P(I0+T) | P(I0+2T) |
+| 资源 | 基础价 | I0 | T | 低于时函数 | 低于时目标 | 高于时函数 | 高于时目标 | P(I0−T) | P(I0+T) | P(I0+2T) |
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
 | **Wheat** | 25 | 10,000 | 400 | sqrt | 0.80 | log | 0.20 | $45 | $20 | $19 |
 | **Carrot** | 35 | 10,000 | 450 | log | 0.20 | sqrt | 0.70 | $42 | $10 | $1 |
@@ -231,107 +228,107 @@ Floored at `$1` and rounded to the nearest dollar.
 | **Wool** | 200 | 10,000 | 105 | log | 0.20 | sq | 3.20 | $240 | $1 | $1 |
 | **Fertilizer** | 100 | 10,000 | 200 | linear | 0.40 | linear | 0.40 | $140 | $60 | $20 |
 
-The defaults live in `MARKET_PARAMS` in `kaggriculture.py`. Per-resource overrides (sparse: any subset of `base`, `I0`, `T`, `below_func`, `below_target`, `above_func`, `above_target`) can be supplied at episode creation via `env.configuration["marketParams"]` without touching code, e.g. `{"WOOL": {"above_target": 0.95}}`.
+默认值保存在 `kaggriculture.py` 中的 `MARKET_PARAMS`。可以在创建回合时通过 `env.configuration["marketParams"]` 提供按资源覆盖参数（稀疏覆盖：任意子集 `base`、`I0`、`T`、`below_func`、`below_target`、`above_func`、`above_target`），无需修改代码，例如 `{"WOOL": {"above_target": 0.95}}`。
 
-## Turn Processing Order
+## 回合处理顺序
 
-1. **Action validation** — verify action legality  
-2. **Player actions** — record the actions taken by each player (happening simultaneously)  
-3. **Market actions** \- process market queue in order by player (described above)  
-4. **Town buy actions** \- town center and shops reduce inventory  
-5. **Update observations**  
-   - **Day refresh** — if applicable, update the condition of plants and animals for a new day, and reset their fed/watered to condition to false  
-   - **Market refresh** — modify the price of items on the market based on sells from previous turn  
-   - **Income update** — update the player’s bank based on any buys or sells  
-   - **Farm update** — clear plants that have been harvested, items from the inventory that have been used or sold, add new plants/animals to the farm, etc
+1. **动作校验** — 验证动作是否合法  
+2. **玩家动作** — 记录各玩家所执行的动作（同时发生）  
+3. **市场动作** — 按玩家顺序处理市场队列（如上所述）  
+4. **城镇购买动作** — 镇中心和商店减少库存  
+5. **更新观测**  
+   - **日刷新** — 如适用，更新植物和动物的新一日状态，并将它们的喂养/浇水状态重置为 false  
+   - **市场刷新** — 根据上一回合的出售情况调整市场价格  
+   - **收入更新** — 根据任何买入或卖出更新玩家银行余额  
+   - **农场更新** — 清除已收获的作物、已使用或出售的库存物品，将新种植的作物/动物加入农场等
 
-## Win Conditions
+## 胜利条件
 
-The win condition is simple- whoever has the greatest number of coins at the end of the season is the winner. It is also possible that the two players will tie.
+胜利条件很简单——赛季结束时银行中金币最多者获胜。两名玩家也可能出现平局。
 
-## Reward
+## 奖励
 
-The player who has the most money in the bank at the end of the game wins. Unsold items in the inventory do not count towards that total.
+游戏结束时银行中现金最多的玩家获胜。未售出的库存物品不计入该总额。
 
-## Observation Format
+## 观测格式
 
-The top-level observation passed to each agent:
+传递给每个智能体的顶层观测：
 
 ```py
 {
-  "player": int,           # 0 or 1
-  "day":    int,           # 0-indexed in-game day
-  "hour":   int,           # 0-indexed turn within the day
-  "farms":  [farm, farm],  # public per-player state, indexed by player id (shared)
-  "market": {              # shared
+  "player": int,           # 0 或 1
+  "day":    int,           # 游戏内 0 起始天数
+  "hour":   int,           # 每天内 0 起始回合
+  "farms":  [farm, farm],  # 公共每玩家状态，按玩家 ID 索引（共享）
+  "market": {              # 共享
     "inventory": { "WHEAT": int, "CARROT": int, ... },
     "prices":    { "WHEAT": int, "CARROT": int, ... },
   },
-  "town": {                # shared
+  "town": {                # 共享
     "unlocked_shops": ["BAKERY", ...],
   },
-  "private": {             # this player only; opponent's private state is not visible
+  "private": {             # 仅此玩家可见；对手的私人状态不可见
     "shed":        { "WHEAT": int, "GOOSE": int, "FERTILIZER": int, ... },
     "seeds":       { "WHEAT": int, "CARROT": int, ... },
-    "inventories": [farmer_inv, hand_inv, ...],  # [0] is the main farmer
+    "inventories": [farmer_inv, hand_inv, ...],  # [0] 是主农夫
   },
 }
 ```
 
-Each `farm` dict (public, visible to both players):
+每个 `farm` 字典（公共，对双方玩家可见）：
 
 ```py
 {
   "money":              float,
   "tiles":              [[tile, ...], ...],   # tiles[y][x]
   "farmer":             [x, y],
-  "hands":              [[x, y], ...],         # hired hands for the current day
-  "unlocked_quadrants": ["NW", ...],          # subset of {"NW","NE","SW","SE"}
-  "hires_today":        int,                  # used to price the next HIRE
+  "hands":              [[x, y], ...],         # 当前日的雇佣工人
+  "unlocked_quadrants": ["NW", ...],          # {"NW","NE","SW","SE"} 的子集
+  "hires_today":        int,                  # 用于计算下一次 HIRE 的价格
 }
 ```
 
-A `tile` is one of:
+`tile` 的取值之一为：
 
-- `None` — empty unlocked tile
-- `"LOCKED"` — tile in a quadrant the player has not yet bought
-- a plant dict:
+- `None` — 空的已解锁格子
+- `"LOCKED"` — 玩家尚未购买的象限中的格子
+- 一个作物字典：
   ```py
   {
     "kind":                 "PLANT",
     "crop":                 "WHEAT" | "CARROT" | "TOMATO" | "STRAWBERRY" | "MELON",
     "planted_day":          int,
-    "watered_today":        bool,   # reset to False each end-of-day
-    "consecutive_unwatered": int,   # 2+ → tile turns to a weed
-    "yield_units":          int,    # units currently harvestable
-    "max_lifespan_step":    int,    # step at which decay begins; -1 for ongoing crops
-    "fertilized_until_day": int,    # last day fertilizer bonus applies; -1 if none
+    "watered_today":        bool,   # 每日结束时重置为 False
+    "consecutive_unwatered": int,   # 2+ → 格子变成杂草
+    "yield_units":          int,    # 当前可收获单位数
+    "max_lifespan_step":    int,    # 开始衰减的回合；持续性作物为 -1
+    "fertilized_until_day": int,    # 施肥加成适用的最后一天；未施肥为 -1
   }
   ```
-- a weed dict: `{"kind": "WEED"}`
-- an animal structure dict (coop/pasture, optionally occupied):
+- 一个杂草字典：`{"kind": "WEED"}`
+- 一个动物结构字典（鸡舍 / 牧场，可选是否有动物）：
   ```py
   {
     "kind":                 "COOP" | "PASTURE",
-    "animal":               "GOOSE" | "COW" | "SHEEP" | None,  # None until PLACEd
+    "animal":               "GOOSE" | "COW" | "SHEEP" | None,  # 放置前为 None
     "placed_day":           int,
     "yield_units":          int,
     "fed_today":            bool,
-    "consecutive_unfed":    int,    # 2+ → animal escapes
+    "consecutive_unfed":    int,    # 2+ → 动物逃跑
     "cared_today":          bool,
-    "fertilizer_available": bool,   # set at end-of-day for every surviving animal; cleared by COLLECT_FERTILIZER
-    "pending_care_bonus":   int,    # banked CARE bonus, applied on the next yield tick
+    "fertilizer_available": bool,   # 每日结束时为每只存活动物设置；COLLECT_FERTILIZER 后清除
+    "pending_care_bonus":   int,    # 存储的 CARE 奖励，在下一次产量触发时支付
   }
   ```
 
-## Quick Start
+## 快速开始
 
 ```py
 from kaggle_environments import make
 
 
 def my_agent(obs):
-    # Buy one wheat seed on the very first turn, then PASS forever after.
+    # 在第一回合购买一颗小麦种子，然后之后永远 PASS。
     if obs.get("step", 0) == 0:
         return {"farmer": ["PASS"], "market": [["BUY_SEED", "WHEAT", 1]]}
     return {"farmer": ["PASS"], "market": []}
@@ -342,21 +339,20 @@ env.run([my_agent, "random"])
 env.render(mode="ipython", width=800, height=800)
 ```
 
-## Configuration Defaults
+## 配置默认值
 
-Per-crop seed costs and per-product base prices are not configurable; they are documented in the Object Types and Price Function tables above. The configurable knobs are:
+作物种子成本和产品基础价格不可配置；它们已在“物品类型”和“价格函数”表中记录。可配置的参数包括：
 
-| Parameter | Default | Description |
+| 参数 | 默认值 | 描述 |
 | :---- | :---- | :---- |
-| episodeSteps | 720 | Total turns in the season (24 turns × 30 days) |
-| boardSize | 10 | Width and height (in tiles) of each player's square farm. Advanced uses 10 = four 5x5 quadrants |
-| startingMoney | 3000 | Coins each player starts with |
-| maxMarketOrdersPerTurn | 10 | Maximum number of market orders processed per player per turn; extras are silently dropped |
-| turnsPerDay | 24 | Number of turns that make up one in-game day |
-| shedCapacity | 100 | Max non-seed items the shed can hold; overflow at end-of-day drop is discarded |
-| weedSpawnChance | 0.005 | Per-tile probability of a weed spawning on an empty unlocked tile during end-of-day refresh |
-| townShopUnlockInterval | 3 | Days between successive town shop unlocks |
-| townShopSellInterval | 4 | Turns between consumption ticks by every unlocked town shop |
-| townCenterSellInterval | 12 | Turns between consumption ticks by the town center |
-| seed | null | Optional input seed for deterministic episode generation; cleared from config after read so it stays out of agent observations |
-
+| episodeSteps | 720 | 赛季总回合数（24 回合 × 30 天） |
+| boardSize | 10 | 每个玩家农场的宽度和高度（格数）。高级用法：10 = 四个 5x5 象限 |
+| startingMoney | 3000 | 每名玩家的起始金币 |
+| maxMarketOrdersPerTurn | 10 | 每回合每名玩家允许处理的最大市场订单数；超出部分被静默丢弃 |
+| turnsPerDay | 24 | 一天包含的回合数 |
+| shedCapacity | 100 | 物资库可容纳的非种子物品最大数量；日终溢出被丢弃 |
+| weedSpawnChance | 0.005 | 每个空已解锁格子在日终刷新时生成杂草的概率 |
+| townShopUnlockInterval | 3 | 城镇商店解锁间隔（天） |
+| townShopSellInterval | 4 | 每个已解锁商店的消耗周期（回合） |
+| townCenterSellInterval | 12 | 镇中心的消耗周期（回合） |
+| seed | null | 可选的输入种子，用于确定性回合生成；读取后会从配置中清除，以免出现在智能体观测中 |
